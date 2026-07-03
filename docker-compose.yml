@@ -8,3 +8,14 @@ services:
     environment:
       - PYTHONPATH=/app/backend
     restart: always
+
+# El nuevo contenedor de tu interfaz visual
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend.Dockerfile
+    ports:
+      - "80:80" # Podrás ver tu app entrando a http://localhost
+    depends_on:
+      - backend
+    restart: always
