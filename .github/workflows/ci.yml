@@ -44,7 +44,7 @@ jobs:
           flake8 backend/ --count --select=E9,F63,F7,F82 --show-source --statistics
           flake8 backend/ --count --exit-zero --max-complexity=10 --max-line-length=79 --statistics --exclude=tests/,venv/,env/
 
-      - name: Setup Database and Run Tests
+      - name: Setup Database and Run Tests with Coverage
         env:
           DATABASE_URL: postgresql://testuser:testpass@localhost:5432/test_db
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
@@ -53,4 +53,10 @@ jobs:
           PYTHONPATH: .:backend
         run: |
           python backend/database.py
-          pytest backend/tests/ -v
+          pytest backend/tests/ -v --cov=backend/ --cov-fail-under=80
+
+      - name: Status Accounting Report
+        if: success()
+        run: |
+          echo '{"pr_sha": "${{ github.sha }}", "status": "approved", "coverage": ">=80%", "timestamp": "$(date -u -Iseconds)"}' > scm-status-report.json
+          cat scm-status-report.json
