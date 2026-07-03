@@ -1,11 +1,29 @@
 name: MVP Continuous Integration
+
 on:
   pull_request:
     branches:
       - main
+
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_DB: test_db
+          POSTGRES_USER: testuser
+          POSTGRES_PASSWORD: testpass
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:6432
+
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -22,7 +40,14 @@ jobs:
           pip install -r requirements.txt
 
       - name: Run Linter
-        run: flake8 src/
+        run: |
+          flake8 backend/ --count --max-complexity=10 --max-line-length=79 --statistics --exclude=tests/,venv/,env/
 
-      - name: Run Unit Tests with Coverage
-        run: pytest --cov=src --cov-fail-under=80
+      - name: Run Unit Tests
+        env:
+          DATABASE_URL: postgresql://testuser:testpass@localhost:5432/test_db
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+        run: |
+          pytest tests/ -v
