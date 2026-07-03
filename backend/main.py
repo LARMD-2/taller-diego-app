@@ -4,6 +4,7 @@ from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import Response, HTMLResponse
 from fastapi.openapi.docs import get_swagger_ui_html
 from db import status_routes
+from db.base import init_db # Importa la función
 import time
 
 from src.auth.infrastructure import auth_routes
@@ -51,6 +52,11 @@ async def add_cache_headers(request: Request, call_next):
         response.headers["Cache-Control"] = "public, max-age=300"
     
     return response
+
+@app.on_event("startup")
+async def startup_event():
+    # Inicializa la extensión de la BD solo al arrancar el contenedor
+    init_db()
 
 app.include_router(status_routes.router,
                    prefix="/api/v1/status", tags=["Status"])
