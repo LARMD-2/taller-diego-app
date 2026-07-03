@@ -1,4 +1,5 @@
 from db.base import engine, Base
+import db.models
 
 # El bloque if asegura que esto SOLO se ejecute si llamas al archivo directamente
 # desde la terminal (como lo hace tu GitHub Actions), y no cuando lo importas.
