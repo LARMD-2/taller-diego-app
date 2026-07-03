@@ -51,4 +51,4 @@ jobs:
           SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
           JWT_SECRET: ${{ secrets.JWT_SECRET }}
         run: |
-          pytest tests/ -v
+          pytest backend/tests/ -v
