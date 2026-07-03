@@ -44,7 +44,7 @@ jobs:
           flake8 backend/ --count --select=E9,F63,F7,F82 --show-source --statistics
           flake8 backend/ --count --exit-zero --max-complexity=10 --max-line-length=79 --statistics --exclude=tests/,venv/,env/
 
-      - name: Run Unit Tests
+      - name: Setup Database and Run Tests
         env:
           DATABASE_URL: postgresql://testuser:testpass@localhost:5432/test_db
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
@@ -52,4 +52,5 @@ jobs:
           JWT_SECRET: ${{ secrets.JWT_SECRET }}
           PYTHONPATH: backend
         run: |
+          python backend/database.py
           pytest backend/tests/ -v
