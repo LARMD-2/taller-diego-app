@@ -1,0 +1,81 @@
+Esta es la guía definitiva para tu `README.md`. He estructurado el contenido para que, si tu profesor o un compañero lo lee, entienda inmediatamente que has implementado un flujo **profesional y automatizado**.
+
+Copia y pega esto en tu archivo `README.md` del repositorio de infraestructura (`taller-diego-gitops`):
+
+---
+
+```markdown
+# 🚀 Sistema de Microservicios Hexagonal (GitOps Workflow)
+
+Este repositorio contiene la configuración declarativa de la infraestructura para nuestro sistema. Utilizamos **Argo CD** para garantizar que el estado de nuestro clúster de Kubernetes coincida siempre con este repositorio (Fuente única de verdad).
+
+## 📋 Requisitos Previos
+Para desplegar este entorno, asegúrate de tener instalado en tu máquina:
+- [Minikube](https://minikube.sigs.k8s.io/)
+- [kubectl](https://kubernetes.io/docs/tasks/tools/)
+- [Helm](https://helm.sh/docs/intro/install/)
+- [Git](https://git-scm.com/)
+
+---
+
+## 🛠️ Paso 1: Inicialización de la Infraestructura (Argo CD)
+Argo CD actúa como el controlador que sincronizará nuestras aplicaciones en el clúster.
+
+1. **Iniciar Minikube:**
+   ```bash
+   minikube start
+
+```
+
+2. **Instalar Argo CD en el clúster: ejecutar linea por linea**
+```bash
+kubectl create namespace argocd   
+helm repo add argo https://argoproj.github.io/argo-helm
+helm upgrade -i argo-cd argo/argo-cd -n argocd --create-namespace
+[System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($(kubectl get secret argocd-initial-admin-secret -n argocd -o jsonpath="{.data.password}")))
+
+COPIAR LA CONTRASEÑA OBTENIDA
+
+
+
+
+
+---
+
+## 🚀 Paso 2: Despliegue de la Aplicación (Bootstrap)
+
+Una vez que Argo CD está instalado, debemos conectarlo con este repositorio para que pueda desplegar los microservicios automáticamente.
+
+1. **Clonar este repositorio:**
+```bash
+git clone https://github.com/LARMD-2/taller-diego-gitops.git
+cd taller-diego-gitops
+
+```
+
+
+2. **Ejecutar el Bootstrap:**
+Esto le dice a Argo CD que monitoree los archivos en este repositorio:
+```bash
+kubectl apply -f application-mvp.yaml
+
+```
+
+
+3. **Acceder al Dashboard:**
+Para visualizar el despliegue, expón el servicio:
+```bash
+kubectl port-forward svc/argo-cd-argocd-server -n argocd 8080:443
+
+```
+
+
+Entra a `https://localhost:8080` (Usuario: `admin`, Contraseña obtenida mediante `kubectl`).
+```
+
+Una vez logueado usar el comando 
+minikube service frontend-deployment --url
+y entrar `https://localhost` para ver el software
+---
+
+
