@@ -1,14 +1,19 @@
-name: MVP Continuous Integration
+name: MVP Continuous Integration & GitOps
 
 on:
+  push:
+    branches:
+      - main
   pull_request:
     branches:
       - main
 
 jobs:
+  # ==========================================
+  # ETAPA 1: PRUEBAS Y CALIDAD (Tu código original)
+  # ==========================================
   build-and-test:
     runs-on: ubuntu-latest
-
     services:
       postgres:
         image: postgres:15
@@ -67,3 +72,59 @@ jobs:
         with:
           name: status-report
           path: scm-status-report.json
+
+  # ==========================================
+  # ETAPA 2: DOCKER Y GITOPS (El nuevo requerimiento)
+  # ==========================================
+  deploy-gitops:
+    needs: build-and-test # ESTA LÍNEA ES MAGIA: Solo se ejecuta si las pruebas pasan
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - name: 1. Checkout Código (Repo A)
+        uses: actions/checkout@v4
+
+      - name: 2. Login a Docker Hub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: 3. Generar Etiqueta SemVer
+        id: vars
+        run: echo "tag=v1.1.${{ github.run_number }}" >> $GITHUB_OUTPUT
+
+      - name: 4. Construir y Subir Frontend
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          file: ./frontend.Dockerfile
+          push: true
+          tags: larmd/taller-frontend:${{ steps.vars.outputs.tag }}
+
+      - name: 5. Construir y Subir Backend
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          file: ./dockerfile
+          push: true
+          tags: larmd/taller-backend:${{ steps.vars.outputs.tag }}
+
+      - name: 6. Checkout GitOps Repo (Repo B)
+        uses: actions/checkout@v4
+        with:
+          repository: LARMD-2/taller-diego-gitops
+          token: ${{ secrets.GITOPS_TOKEN }}
+          path: gitops-repo
+
+      - name: 7. Actualizar deployment.yaml con la nueva versión
+        run: |
+          cd gitops-repo
+          sed -i "s|image: larmd/taller-frontend:.*|image: larmd/taller-frontend:${{ steps.vars.outputs.tag }}|g" deployment.yaml
+          sed -i "s|image: larmd/taller-backend:.*|image: larmd/taller-backend:${{ steps.vars.outputs.tag }}|g" deployment.yaml
+          
+          git config user.name "GitHub Actions Bot"
+          git config user.email "actions@github.com"
+          git add deployment.yaml
+          git commit -m "chore: actualizacion automatica de imagenes a version ${{ steps.vars.outputs.tag }}"
+          git push
