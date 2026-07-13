@@ -7,9 +7,7 @@ import { SUPABASE } from "./data-store.js";
  * @returns {Object|null} Datos de autenticación o null si falla
  */
 export async function obtainToken(email, password) {
-  const API_BASE_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
-  ? 'http://localhost:8000/api/v1'  // Desarrollo local
-  : '/api/v1';
+  const API_BASE_URL = '/api/v1';
   try {
     const response = await fetch(`${API_BASE_URL}/auth/login`, {
       method: 'POST',

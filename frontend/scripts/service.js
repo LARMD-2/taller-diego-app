@@ -11,9 +11,7 @@ import { resetBodyDefaults } from "./utils/state-manager.js";
 import { deleteResource } from "./data-manager.js";
 import { escapeHtml } from "./utils/sanitize.js";
 
-const API_BASE_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
-  ? 'http://localhost:8000/api/v1'  // Desarrollo local
-  : '/api/v1';
+const API_BASE_URL = '/api/v1';
 
 // ========== CARGAR COMPONENTES UI ==========
 loadComponent("header", "includes/header.html");

@@ -1,5 +1,6 @@
 services:
-  backend:
+  # Cambiado a api-service para unificar el DNS con Kubernetes
+  api-service:
     build: .
     ports:
       - "8000:8000"
@@ -9,13 +10,12 @@ services:
       - PYTHONPATH=/app/backend
     restart: always
 
-# El nuevo contenedor de tu interfaz visual
   frontend:
     build:
       context: .
       dockerfile: frontend.Dockerfile
     ports:
-      - "80:80" # Podrás ver tu app entrando a http://localhost
+      - "80:80" # Tu app principal seguirá abriendo en http://localhost
     depends_on:
-      - backend
+      - api-service # Apesta al nuevo nombre unificado
     restart: always
