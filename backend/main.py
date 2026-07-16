@@ -6,7 +6,33 @@ from fastapi.openapi.docs import get_swagger_ui_html
 from db import status_routes
 from db.base import init_db # Importa la función
 import time
+import os
 from prometheus_fastapi_instrumentator import Instrumentator
+
+# --- OpenTelemetry SDK ---
+from opentelemetry import trace
+from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.sdk.trace.export import BatchSpanProcessor
+from opentelemetry.sdk.resources import Resource
+from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+try:
+    from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
+    _OTLP_AVAILABLE = True
+except ImportError:
+    _OTLP_AVAILABLE = False
+
+# Configurar el proveedor de trazas
+_resource = Resource.create({"service.name": "taller-diego-api", "service.version": "1.0.0"})
+_provider = TracerProvider(resource=_resource)
+
+# Exportar trazas al OTel Collector si está disponible
+_otel_endpoint = os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT", "")
+if _OTLP_AVAILABLE and _otel_endpoint:
+    _exporter = OTLPSpanExporter(endpoint=_otel_endpoint, insecure=True)
+    _provider.add_span_processor(BatchSpanProcessor(_exporter))
+
+trace.set_tracer_provider(_provider)
+tracer = trace.get_tracer(__name__)
 
 from src.auth.infrastructure import auth_routes
 from src.empleados.infrastructure import empleado_routes
@@ -37,29 +63,36 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Middleware para agregar headers de caché y performance
+# Middleware para agregar headers de caché, performance y Trace ID
 @app.middleware("http")
 async def add_cache_headers(request: Request, call_next):
     start_time = time.time()
     response = await call_next(request)
     process_time = time.time() - start_time
-    
+
+    # Propagar el Trace ID de OTel en el header de respuesta
+    current_span = trace.get_current_span()
+    if current_span:
+        trace_id = format(current_span.get_span_context().trace_id, "032x")
+        response.headers["X-Trace-Id"] = trace_id
+
     # Agregar header de tiempo de procesamiento
-    response.headers["X-Process-Time"] = str(process_time)
-    
+    response.headers["X-Process-Time"] = str(round(process_time * 1000, 2)) + "ms"
+
     # Agregar headers de caché para endpoints de API
     if request.url.path.startswith("/api/v1/"):
-        # Caché de 5 minutos para datos que no cambian frecuentemente
         response.headers["Cache-Control"] = "public, max-age=300"
-    
+
     return response
 
 @app.on_event("startup")
 async def startup_event():
     # Inicializa la extensión de la BD solo al arrancar el contenedor
     init_db()
-    # Iniciar instrumentador de Prometheus
-    Instrumentator().instrument(app).expose(app)
+
+# Iniciar instrumentador de Prometheus y OpenTelemetry
+Instrumentator().instrument(app).expose(app)
+FastAPIInstrumentor.instrument_app(app)
 
 app.include_router(status_routes.router,
                    prefix="/api/v1/status", tags=["Status"])

@@ -12,3 +12,8 @@ pytest-cov>=4.0.0
 flake8>=6.0.0
 prometheus-client
 prometheus-fastapi-instrumentator
+opentelemetry-sdk
+opentelemetry-api
+opentelemetry-exporter-otlp-proto-grpc
+opentelemetry-instrumentation-fastapi
+opentelemetry-instrumentation-sqlalchemy
