@@ -6,6 +6,7 @@ from fastapi.openapi.docs import get_swagger_ui_html
 from db import status_routes
 from db.base import init_db # Importa la función
 import time
+from prometheus_fastapi_instrumentator import Instrumentator
 
 from src.auth.infrastructure import auth_routes
 from src.empleados.infrastructure import empleado_routes
@@ -57,6 +58,8 @@ async def add_cache_headers(request: Request, call_next):
 async def startup_event():
     # Inicializa la extensión de la BD solo al arrancar el contenedor
     init_db()
+    # Iniciar instrumentador de Prometheus
+    Instrumentator().instrument(app).expose(app)
 
 app.include_router(status_routes.router,
                    prefix="/api/v1/status", tags=["Status"])
@@ -93,5 +96,14 @@ async def custom_swagger_ui_html():
 @app.get("/")
 def read_root():
     return {"Hello": "World"}
+
+@app.get("/health/live", tags=["Health"])
+def liveness_probe():
+    return {"status": "alive"}
+
+@app.get("/health/ready", tags=["Health"])
+def readiness_probe():
+    # En un escenario real, aquí podrías verificar la conexión a DB
+    return {"status": "ready"}
 
 

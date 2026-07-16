@@ -1,6 +1,10 @@
 from datetime import datetime, timedelta
 from typing import Optional, Any, Dict
 import json
+try:
+    from src.metrics import taller_diego_cache_requests_total
+except ImportError:
+    taller_diego_cache_requests_total = None
 
 class SimpleCache:
     """
@@ -14,14 +18,20 @@ class SimpleCache:
         Obtiene un valor del caché si existe y no ha expirado
         """
         if key not in self._cache:
+            if taller_diego_cache_requests_total:
+                taller_diego_cache_requests_total.labels(result='miss', entity='general').inc()
             return None
         
         entry = self._cache[key]
         if datetime.now() > entry['expires_at']:
             # Expiró, eliminar
             del self._cache[key]
+            if taller_diego_cache_requests_total:
+                taller_diego_cache_requests_total.labels(result='miss', entity='general').inc()
             return None
         
+        if taller_diego_cache_requests_total:
+            taller_diego_cache_requests_total.labels(result='hit', entity='general').inc()
         return entry['value']
     
     def set(self, key: str, value: Any, ttl_seconds: int = 300):

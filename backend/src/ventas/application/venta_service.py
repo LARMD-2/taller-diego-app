@@ -7,6 +7,14 @@ from src.ventas.infrastructure.venta import Venta
 from src.ventas.infrastructure.venta_producto import VentaProducto
 from core.cache import cache
 from src.ventas.domain.venta_domain import VentaDomain
+try:
+    from src.metrics import (
+        taller_diego_sales_registered_total,
+        taller_diego_domain_validation_failures_total
+    )
+except ImportError:
+    taller_diego_sales_registered_total = None
+    taller_diego_domain_validation_failures_total = None
 
 
 class VentaService:
@@ -61,8 +69,12 @@ class VentaService:
             # --- AQUÍ ESTABA EL PROBLEMA ---
             # Este return debe estar fuera del 'if' y dentro del 'try'
             venta_guardada = self.repo.guardar(nueva_venta_orm)
+            if taller_diego_sales_registered_total:
+                taller_diego_sales_registered_total.inc()
             return venta_guardada
         except ValueError as e:
+            if taller_diego_domain_validation_failures_total:
+                taller_diego_domain_validation_failures_total.labels(aggregate='VentaDomain', invariant_rule='validation_error').inc()
             raise HTTPException(status_code=400, detail=str(e))
 
     def obtener_registro_completo_ventas(self):
