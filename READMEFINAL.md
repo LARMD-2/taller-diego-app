@@ -33,6 +33,37 @@ helm upgrade -i argo-cd argo/argo-cd -n argocd --create-namespace
 [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($(kubectl get secret argocd-initial-admin-secret -n argocd -o jsonpath="{.data.password}")))
 ```
 
+4. Agrega el repositorio de Prometheus y actualiza los charts:
+
+```bash
+helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+helm repo update
+```
+
+5. Instala el stack de monitoreo:
+
+```bash
+helm install prometheus-stack prometheus-community/kube-prometheus-stack -n monitoring --create-namespace
+```
+
+6. Obtén la contraseña para acceder a Prometheus:
+
+```powershell
+$secret = kubectl get secret --namespace monitoring -l app.kubernetes.io/component=admin-secret -o jsonpath="{.items[0].data.admin-password}"
+[System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($secret))
+```
+
+7. Agrega e instala Chaos Mesh:
+
+```bash
+# 1. Agregar el repositorio de Helm
+helm repo add chaos-mesh https://charts.chaos-mesh.org
+helm repo update
+
+# 2. Instalar Chaos Mesh
+helm install chaos-mesh chaos-mesh/chaos-mesh -n chaos-testing --create-namespace
+```
+
 ## Paso 2: Conectar el repositorio con Argo CD
 
 Una vez instalado Argo CD, aplica el manifiesto bootstrap que registra la aplicación y permite que Argo CD observe el repositorio.
@@ -65,6 +96,26 @@ minikube service frontend-deployment --url
 ```
 
 Abre la URL resultante en el navegador para comprobar que la aplicación quedó disponible.
+
+## Acceso a Grafana y Jaeger
+
+Para revisar métricas y trazas, expón los servicios localmente con estos comandos:
+
+```bash
+kubectl port-forward svc/prometheus-stack-grafana -n monitoring 3000:80
+```
+
+Luego abre:
+
+`http://localhost:3000`
+
+```bash
+kubectl port-forward svc/jaeger-ui -n monitoring 16686:16686
+```
+
+Luego abre:
+
+`http://localhost:16686`
 
 ## Notas
 
