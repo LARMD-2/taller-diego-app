@@ -25,6 +25,13 @@ engine = create_engine(
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
+try:
+    from src.metrics import taller_diego_database_connections_active
+    taller_diego_database_connections_active.set_function(lambda: engine.pool.checkedout())
+except ImportError:
+    pass
+
+
 def init_db():
     """
     Función para inicializar la DB solo cuando el contenedor esté listo.
